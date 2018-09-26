@@ -1,0 +1,273 @@
+﻿@using System.Data;
+@using NNApp.Models;
+
+@{
+    ViewBag.Title = Model.NewspaperName;
+
+}
+
+<script>
+    function removeEmail(obj_str, subscription_id, email) {
+        $.ajax({
+            url: "/Subscription/RemoveEmail?SubscriptionId=" + encodeURIComponent(subscription_id) + "&Email=" + encodeURIComponent(email),
+            type: "GET",
+            //context: document.body,
+            error: function () { console.log('error'); console.log(data) }
+        }).done(function (data) {
+            console.log(data);
+            if (data.LastEmailWasDeleted == true) {
+                $("#email").html("Нет");
+                $("#active").val("0");
+            }
+            //Remove html element
+            $("#" + obj_str).remove();
+        });
+    }
+
+    //Add new email to subscription
+    function addEmail(subscription_id) {
+        //Get value from form
+        new_email = document.getElementById('new_email').value.trim();
+
+        //Clear modal
+        $('.modal').on('hidden.bs.modal', function () {
+            $(this).find('form')[0].reset();
+        });
+
+        //Send JSON query
+        $.ajax({
+            url: "/Subscription/AddEmail?SubscriptionId=" + encodeURIComponent(subscription_id) + "&Email=" + encodeURIComponent(new_email),
+            type: "GET",
+            error: function () { console.log('Ajax error'); console.log(data) }
+        }).done(function (data) {
+            //Log server's answer
+            console.log(data);
+
+            if (data.Result == "Success") {
+                //Get new id from server
+                new_email_id = data.new_email_id
+
+                //Get new email value
+                if ($("#email").html().trim() == "Нет") { $("#email").html("") }
+
+                //Add email to list
+                $("#email").html($("#email").html() +
+                    "<span id='email-" + new_email_id + "'>" + new_email +
+                    "&nbsp;<a class=\"glyphicon glyphicon-remove red\" href=\"#\" onclick=\"if(confirm('Удалить емэйл " + new_email + "?')){removeEmail('email-" + new_email_id + "', " + subscription_id + ", '" + new_email + "')}\"></a><br /></span>"
+                );
+
+                //Change active status
+                $("#active").val(data.enabled);
+            } else {
+                console.log("Uknown error!");
+            }
+
+        });
+    }
+
+    function changeActive(subscription_id) {
+        val = $("#active").val();
+
+        $.ajax({
+            url: "/Subscription/ChangeActive?SubscriptionId=" + encodeURIComponent(subscription_id) + "&val=" + val,
+            type: "GET",
+            //context: document.body,
+            error: function () { console.log('Ajax error'); console.log(data) }
+        }).done(function (data) {
+            //Log server answer
+            console.log(data);
+
+            if (data.Result == "Success") {
+                console.log("Параметр рассылки активен/нет успешно обновлён на " + val);
+            } else {
+                if (data.Result == "Error") {
+                    if (data.ErrorCode == "EmptyEmail") {
+                        alert("Запрещено активировать подписку без подписчиков");
+                        $("#active").val("0");
+                    } else {
+                        alert("Managed error, code is uknown.");
+                    }
+                } else {
+                    alert("Uknown error.");
+                }
+            }
+
+        });
+    }
+</script>
+
+<h2>Рассылка</h2>
+<div id="message"></div>
+<table>
+    <tr>
+        <td>Id рассылки:</td>
+        <td>@Model.id</td>
+    </tr>
+    <tr>
+        <td>Id СМИ:</td>
+        <td>@Model.newspaper_id</td>
+    </tr>
+    <tr>
+        <td>Название СМИ:</td>
+        <td>@Model.NewspaperName</td>
+    </tr>
+    <tr>
+        <td>Получатели: <a class="glyphicon glyphicon-plus green" href="#" data-toggle="modal" data-target="#exampleModal"></a></td>
+        <td id="email">
+            @{
+                string email = Model.email.Trim();
+                string[] emails = email.Split(';');
+                int i = 1;
+            }
+
+            @if (email != "")
+            {
+                foreach (string email_str in emails)
+                {
+                    <span id="email-@i">
+                        @email_str
+                        <a class="glyphicon glyphicon-remove red" href="#" onclick="if(confirm('Удалить емэйл @email_str?')){removeEmail('email-@i', @Model.id, '@email_str')}"></a>
+                        <br />
+                    </span>
+                    i++;
+                }
+            }
+            else
+            {
+                <text>Нет</text>
+            }
+        </td>
+    </tr>
+    <tr>
+        <td>№ сообщения:</td>
+        <td>@Model.MessageType</td>
+    </tr>
+    <tr>
+        <td>
+            С адреса:
+        </td>
+        <td>
+            @Model.FromEmail
+        </td>
+    </tr>
+
+    <tr>
+        <td>
+            Активна
+        </td>
+        <td>
+            <select id="active" name="active" onchange="changeActive(@Model.id);">
+                @if (Model.Enabled.Equals(true))
+                {
+                    <option value="1" selected>Да</option>
+                    <option value="0">Нет</option>
+                }
+                else
+                {
+                    <option value="1">Да</option>
+                    <option value="0" selected>Нет</option>
+                }
+            </select>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Комментарий
+        </td>
+        <td>
+            <textarea name="comment" id="comment">@Model.Comment</textarea>
+            <div id="save_comment_result" class="result alert alert-success"></div>
+        </td>
+    </tr>
+</table>
+
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Добавить емэйл</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Емэйл:
+                @using (Html.BeginForm())
+                {
+                    @Html.TextBox("new_email", "", new { id = "new_email" })
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="addEmail(@Model.id)">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script>
+        //New subscription creation token
+        new_id = $.cookie("NewSubscriptionId");
+
+        //Get subscription id
+        loc = window.location.href
+        srch = loc.match(/^http:\/\/.*Details\/([0-9]{1,10})$/i);
+        subscription_id = srch[1];
+
+        //Comment changing token
+        comment = "";
+
+        //Ready document
+        $(document).ready(function () {
+            comment = $("#comment").html().trim();
+        });
+
+        //Message about creation of new subscription
+        if (new_id) {
+            if (subscription_id == new_id) {
+                console.log('Got message that new subscription was created successfully')
+
+                //Change message block
+                $("#message").addClass("alert alert-success");
+                $("#message").width("500px");
+                $("#message").html("Рассылка была успешно создана. Пожалуйста, выполните настройку.");
+
+                //Remove cookie
+                $.removeCookie('NewSubscriptionId', { path: '/Subscription' });
+            }
+        }
+
+        //Save comment action
+        $("#comment").on('focusout', function () {
+            if ($("#comment").val().trim() == comment) {
+                console.log("Comment was not changed");
+            } else {
+                console.log("Comment was changed");
+
+                //Update comment changing token value
+                comment = $("#comment").val().trim();
+                
+                //Send JSON query
+                $.ajax({
+                    url: "/Subscription/SaveComment?SubscriptionId=" + encodeURIComponent(subscription_id) + "&Text=" + encodeURIComponent($("#comment").val()),
+                    type: "GET",
+                    error: function () { console.log('Ajax error'); console.log(data) }
+                }).done(function (data) {
+                    if (data.Result == "Success") {
+                        console.log("Comment saved successfully");
+                        var dt = new Date();
+                        var time = dt.getHours() + ":" + dt.getMinutes() + " (" + dt.getSeconds() + "сек)";
+                        $("#save_comment_result").css("visibility", "visible");
+                        $("#save_comment_result").html("Комментарий сохранён в " + time);
+                    } else {
+                        //Server script return managed error
+                        console.log("Uknown error.");
+                    }
+                });
+            }
+        });
+    </script>
+}

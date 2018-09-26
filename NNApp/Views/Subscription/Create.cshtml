@@ -1,0 +1,116 @@
+﻿@model NNApp.Models.Subscription
+
+
+<br />
+<h2>Создать рассылку</h2>
+
+@using (Html.BeginForm(null, null, FormMethod.Post, new { id = "form_1" }))
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-horizontal">
+
+        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        <br />
+        <label class="" for="NewspaperName">Название СМИ</label><br />
+        <div class="" id="input_container">
+            @Html.EditorFor(model => model.NewspaperName, new { htmlAttributes = new { @class = "form-control", @id = "name_input" } })
+            @Html.ValidationMessageFor(model => model.NewspaperName, "", new { @class = "text-danger" })
+            <div class="popup-tip" id="name_tip" onclick="return false;">
+            </div>
+        </div>
+        <div class="">
+            <br/>
+            <input type="submit" value="Создать" class="btn btn-default" />
+        </div>
+    </div>
+}
+
+<br /><br />
+
+<div>
+    @Html.ActionLink("Назад к списку", "Index")
+</div>
+
+
+@section scripts {
+    <script type="text/javascript">
+        var gl_np_id = -1;
+        var gl_np_name = "";
+
+        $("#name_input").on('keyup paste', function () {
+            if ($("#name_input").val() == "") {
+                $("#name_tip").css("visibility", "hidden");
+            } else {
+                //Send JSON query
+                $.ajax({
+                    url: "/Subscription/SearchNewspaper?Text=" + encodeURIComponent($("#name_input").val()),
+                    type: "GET",
+                    error: function () { console.log('Ajax error'); console.log(data) }
+                }).done(function (data) {
+                    if (data.Result == "Success") {
+                        //Initialize some variables
+                        html = ""; obj_count = 0;
+
+                        //Create box content
+                        for (var key in data.Data) {
+                            html += "<a href='#' id='np_" + data.Data[key]['id'] + "' onClick=\"chooseNp(" + data.Data[key]['id'] + ", '" + data.Data[key]['name'] + "')\">" + data.Data[key]['name'] + "</a><br/>";
+                            obj_count++;
+                        }
+
+                        //Change box content
+                        if (obj_count > 0) {
+                            $("#name_tip").html(html);
+
+                            //Show box
+                            $("#name_tip").css("visibility", "visible");
+                        }
+                    } else {
+                        //Server script return managed error
+                        console.log("Uknown error.");
+                    }
+                });
+
+            }
+        });
+
+        /*$("#input_container").on('focusout', function () {
+            $("#name_tip").css("visibility", "hidden");
+        });*/
+
+        $("#form_1").submit(function (event) {
+            if (gl_np_id == -1) {
+                alert("Вы должны выбрать СМИ.");
+            } else {
+                url = "/Subscription/CreateSubscr?NPid=" + encodeURIComponent(gl_np_id) + "&" + "NPname=" + gl_np_name;
+                $.ajax({
+                    url: url,
+                    type: "GET",
+                    error: function () { console.log('Ajax error'); console.log(data) }
+                }).done(function (data) {
+                    if (data.Result == "Success") {
+                        $.cookie("NewSubscriptionId", data.CreatedItem.id, { path: '/Subscription' });
+                        window.location.replace("/Subscription/Details/" + data.CreatedItem.id);
+                    } else {
+                        if (data.ErrorCode == "SubscriptionWithSameNewspaperIdAlreadyExists") {
+                            alert("Ошибка, рассылка с данным СМИ уже существует.");
+                        } else {
+                            alert("Uknown error\n" + url);
+                        }
+                    }
+                });
+            }
+
+            event.preventDefault();
+            return false;
+        });
+
+        function chooseNp(id, name) {
+            gl_np_id = id;
+            gl_np_name = name;
+
+            $("#name_input").val(name);
+            $("#name_tip").css("visibility", "hidden");
+        }
+    </script>
+}

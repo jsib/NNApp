@@ -1,0 +1,21 @@
+﻿<h2>Сообщения</h2>
+
+<table>
+    <tr>
+        <th>№ сообщения</th>
+        <th>Текст</th>
+    </tr>
+
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>
+                @item.id
+            </td>
+            <td>
+                @item.MessageText
+            </td>
+        </tr>
+    }
+
+</table>

@@ -1,0 +1,45 @@
+﻿@model IEnumerable<NNApp.Models.Subscription>
+
+@{
+    //Layout = null;
+}
+
+<h2>Рассылки</h2>
+
+@using (Html.BeginForm())
+{
+    <div class="s_b">
+        Поиск по названию/емэйл: @Html.TextBox("SearchString")
+        <input type="submit" value="Поиск" />
+    </div>
+}
+
+<p>
+    @Html.ActionLink("Создать", "Create")
+</p>
+
+
+<table>
+    <tr>
+        <th>Название СМИ</th>
+        <th>Е-мэйлы</th>
+    </tr>
+
+    @foreach (var item in Model)
+    {
+        string tr_class = "";
+
+        if (item.Enabled.Equals(false))
+        {
+            tr_class = "ds";
+        }
+
+        <tr class="@tr_class">
+            <td>
+                @Html.ActionLink(item.NewspaperName, "Details", new { id = item.id })
+            </td>
+            <td><span>@item.email</span></td>
+        </tr>
+    }
+
+</table>
