@@ -57,42 +57,65 @@
                 );
 
                 //Change active status
-                $("#active").val(data.enabled);
+                //$("#active").val(data.enabled);
             } else {
                 console.log("Uknown error!");
             }
 
         });
+
     }
 
-    function changeActive(subscription_id) {
+    function saveActive(subscription_id) {
         val = $("#active").val();
 
         $.ajax({
             url: "/Subscription/ChangeActive?SubscriptionId=" + encodeURIComponent(subscription_id) + "&val=" + val,
             type: "GET",
-            //context: document.body,
-            error: function () { console.log('Ajax error'); console.log(data) }
+            error: function () { alert('Ajax error'); console.log(data) }
         }).done(function (data) {
-            //Log server answer
-            console.log(data);
-
             if (data.Result == "Success") {
                 console.log("Параметр рассылки активен/нет успешно обновлён на " + val);
+                saveComment(subscription_id);
             } else {
                 if (data.Result == "Error") {
                     if (data.ErrorCode == "EmptyEmail") {
                         alert("Запрещено активировать подписку без подписчиков");
-                        $("#active").val("0");
                     } else {
-                        alert("Managed error, code is uknown.");
+                        alert("Управляемая ошибка при сохранении свойства 'Активна'");
                     }
                 } else {
-                    alert("Uknown error.");
+                    alert("Неизвестная ошибка при сохранении свойства 'Активна'.");
                 }
             }
-
         });
+    }
+
+    function saveComment(subscription_id) {
+        if ($("#comment").val().trim() == comment) {
+            console.log("Комментарий не был изменён");
+            alert("Рассылка успешно сохранена");
+        } else {
+            //Get current comment value
+            comment = $("#comment").val().trim();
+
+            //Send JSON query
+            $.ajax({
+                url: "/Subscription/SaveComment?SubscriptionId=" + encodeURIComponent(subscription_id) + "&Text=" + encodeURIComponent($("#comment").val()),
+                type: "GET",
+                error: function () { alert('Ajax error'); console.log(data) }
+            }).done(function (data) {
+                if (data.Result == "Success") {
+                    var dt = new Date();
+                    var time = dt.getHours() + ":" + dt.getMinutes() + ":" + dt.getSeconds();
+                    console.log("Комментарий успешно сохранён в " + time);
+                    alert("Рассылка успешно сохранена");
+                } else {
+                    //Server script return managed error
+                    alert("Неизвестная ошибка при сохранении комментария");
+                }
+            });
+        }
     }
 </script>
 
@@ -156,7 +179,7 @@
             Активна
         </td>
         <td>
-            <select id="active" name="active" onchange="changeActive(@Model.id);">
+            <select id="active" name="active" onchange="">
                 @if (Model.Enabled.Equals(true))
                 {
                     <option value="1" selected>Да</option>
@@ -176,7 +199,11 @@
         </td>
         <td>
             <textarea name="comment" id="comment">@Model.Comment</textarea>
-            <div id="save_comment_result" class="result alert alert-success"></div>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="2" class="form_bottom">
+            <input type="submit" id="save_button" value="Сохранить" />
         </td>
     </tr>
 </table>
@@ -208,13 +235,14 @@
 </div>
 
 @section scripts {
-    <script>
+<script>
         //New subscription creation token
         new_id = $.cookie("NewSubscriptionId");
 
         //Get subscription id
         loc = window.location.href
-        srch = loc.match(/^http:\/\/.*Details\/([0-9]{1,10})$/i);
+        console.log(loc)
+        srch = loc.match(/^http:\/\/.*Details\/([0-9]{1,10}).*$/i);
         subscription_id = srch[1];
 
         //Comment changing token
@@ -240,34 +268,10 @@
             }
         }
 
-        //Save comment action
-        $("#comment").on('focusout', function () {
-            if ($("#comment").val().trim() == comment) {
-                console.log("Comment was not changed");
-            } else {
-                console.log("Comment was changed");
-
-                //Update comment changing token value
-                comment = $("#comment").val().trim();
-                
-                //Send JSON query
-                $.ajax({
-                    url: "/Subscription/SaveComment?SubscriptionId=" + encodeURIComponent(subscription_id) + "&Text=" + encodeURIComponent($("#comment").val()),
-                    type: "GET",
-                    error: function () { console.log('Ajax error'); console.log(data) }
-                }).done(function (data) {
-                    if (data.Result == "Success") {
-                        console.log("Comment saved successfully");
-                        var dt = new Date();
-                        var time = dt.getHours() + ":" + dt.getMinutes() + " (" + dt.getSeconds() + "сек)";
-                        $("#save_comment_result").css("visibility", "visible");
-                        $("#save_comment_result").html("Комментарий сохранён в " + time);
-                    } else {
-                        //Server script return managed error
-                        console.log("Uknown error.");
-                    }
-                });
-            }
+        //Save form
+        $("#save_button").on('click', function () {
+            subscription_id = @Model.id
+            saveActive(subscription_id);
         });
-    </script>
+</script>
 }

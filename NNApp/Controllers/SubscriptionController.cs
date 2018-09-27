@@ -223,7 +223,7 @@ namespace NNApp.Controllers
             if (email_old == "")
             {
                 item.email = Email;
-                item.Enabled = true;
+                //item.Enabled = true;
             }
             else
             {
@@ -285,7 +285,7 @@ namespace NNApp.Controllers
             var item = query.Single();
 
             //Check if no email in subscription
-            if (item.email == "")
+            if (item.email == "" && val == 1)
             {
                 return new JsonResult()
                 {

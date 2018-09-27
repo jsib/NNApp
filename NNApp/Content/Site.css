@@ -92,3 +92,8 @@ textarea {
     text-align: center;
     margin:0 auto;
 }
+
+.form_bottom {
+    text-align: right;
+    padding: 10px;
+}
